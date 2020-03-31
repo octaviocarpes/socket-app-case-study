@@ -1,31 +1,46 @@
+const udp = require('dgram');
+const buffer = require('buffer');
+const app = require('express')(udp);
+const bodyParser = require('body-parser');
+const cors = require('cors');
 
-const net = require('net');
-//define host and port to run the server
-const port = 8080;
-const host = '127.0.0.1';
-//Create an instance of the server
-const server = net.createServer(onClientConnection);
-//Start listening with the server on given port and host.
-server.listen(port,host,function(){
-   console.log(`Server started on port ${port} at ${host}`);
-});
-//Declare connection listener function
-function onClientConnection(sock){
-    //Log when a client connnects.
-    console.log(`${sock.remoteAddress}:${sock.remotePort} Connected`);
-     //Listen for data from the connected client.
-    sock.on('data',function(data){
-        //Log data from the client
-        console.log(`${sock.remoteAddress}:${sock.remotePort} Says : ${data} `);
-        //Send back the data to the client.
-        sock.write(`You Said ${data}`);
-    });
-    //Handle client connection termination.
-    sock.on('close',function(){
-        console.log(`${sock.remoteAddress}:${sock.remotePort} Terminated the connection`);
-    });
-    //Handle Client connection error.
-    sock.on('error',function(error){
-        console.error(`${sock.remoteAddress}:${sock.remotePort} Connection Error ${error}`);
-    });
+const convert2Bytes = (data: string): number => {
+    return encodeURI(data).split(/%..|./).length - 1;
 };
+
+app.use(bodyParser.urlencoded({
+    extended: true
+}));
+app.use(bodyParser.json());
+app.use(cors());
+
+
+// creating a client socket
+const client = udp.createSocket('udp4');
+
+
+app.post('/', (req, res) => {
+    client.send(req.body.message,2222,'localhost',function(error){
+        if(error){
+          client.close();
+        }else{
+          console.log('Data sent !!!');
+        }
+    });
+
+    client.on('message',function(msg,info){
+        console.log('Data received from server : ' + msg.toString());
+        console.log('Received %d bytes from %s:%d\n',msg.length, info.address, info.port);
+        console.log(msg.toString());''
+        const response = msg.toString();
+        res.send(`Your message has ${convert2Bytes(response)} bytes`);
+    });
+});
+
+app.get('/', (req, res) => {
+    res.send('alive');
+});
+
+app.listen(5000, () => {
+    console.log('Proxy up on port 5000');
+});
