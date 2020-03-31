@@ -1,4 +1,5 @@
 import React, { useState, MouseEvent } from 'react';
+import axios from 'axios';
 import './App.css';
 import style from 'styled-components';
 
@@ -85,28 +86,44 @@ const App = () => {
   const TCP_HOST = 'http://localhost:4000';
   const UDP_HOST = 'http://localhost:5000';
   const [tcp, setTcp] = useState('');
+  const [tcpResponse, setTcpResponse] = useState('');
   const [udp, setUdp] = useState('');
+  const [udpResponse, setUdpResponse] = useState('');
 
   const connectWithTCP = (event: MouseEvent): void => {
     event.preventDefault();
-    const socket = require('socket.io-client')(TCP_HOST);
-    socket.on('connect', () => {
+    const socket = require('socket.io-client');
+    const io = socket(TCP_HOST);
+    io.on('connect', () => {
       setTcp(`TCP Connected, Uploading file with TCP server.`);
       const TcpFile: HTMLElement = document.getElementById('tcp-input')!;
       TcpFile.click();
       TcpFile.onchange = (file: any) => {
-        console.log(file.target.value)
-        socket.emit('Upload', { 'Name': 'File', 'Data': file.target.value})
+        io.emit('upload', { 'Name': 'File', 'Data': file.target.value})
       };
+    });
+
+    io.on('upload-response', (data: any) => {
+      setTcpResponse(data.Response);
     });
   };
 
   const connectWithUDP = (event: MouseEvent): void => {
     event.preventDefault();
-    const socket = require('socket.io-client')(UDP_HOST);
-    socket.on('connect', () => {
-      setUdp('UDP Connected, Uploading file with UDP server.')
-    });
+    setUdp(`Udp Connected, Uploading file with TCP server.`);
+    const UdpFile: HTMLElement = document.getElementById('udp-input')!;
+    UdpFile.click();
+    UdpFile.onchange = (file: any) => {
+      axios.post(UDP_HOST, {
+        message: file.target.value
+      })
+      .then(response => {
+        setUdpResponse(response.data);
+      })
+      .catch(error => {
+        console.log(error);
+      });
+    };
   };
 
   return (
@@ -123,15 +140,15 @@ const App = () => {
                 <p>{tcp}</p>
                 <button onClick={(event: MouseEvent) => connectWithTCP(event)}>Upload com TCP</button>
                 <input type='file' id='tcp-input'/>
-                <button>Submit</button>
+                <p>{tcpResponse}</p>
               </form>
             </div>
             <div>
               <form>
                 <p>{udp}</p>
-                <input type='file' id='udp-input'/>
                 <button onClick={(event: MouseEvent) => connectWithUDP(event)}>Upload com UDP</button>
-                <button>Submit</button>
+                <input type='file' id='udp-input'/>
+                <p>{udpResponse}</p>
               </form>
             </div>
         </UploadContainer>

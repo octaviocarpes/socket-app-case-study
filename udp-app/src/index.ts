@@ -1,31 +1,47 @@
+const udp = require('dgram');
 
-const net = require('net');
-//define host and port to run the server
-const port = 8080;
-const host = '127.0.0.1';
-//Create an instance of the server
-const server = net.createServer(onClientConnection);
-//Start listening with the server on given port and host.
-server.listen(port,host,function(){
-   console.log(`Server started on port ${port} at ${host}`);
+// --------------------creating a udp server --------------------
+
+// creating a udp server
+const server = udp.createSocket('udp4');
+
+// emits when any error occurs
+server.on('error',function(error){
+  console.log('Error: ' + error);
+  server.close();
 });
-//Declare connection listener function
-function onClientConnection(sock){
-    //Log when a client connnects.
-    console.log(`${sock.remoteAddress}:${sock.remotePort} Connected`);
-     //Listen for data from the connected client.
-    sock.on('data',function(data){
-        //Log data from the client
-        console.log(`${sock.remoteAddress}:${sock.remotePort} Says : ${data} `);
-        //Send back the data to the client.
-        sock.write(`You Said ${data}`);
-    });
-    //Handle client connection termination.
-    sock.on('close',function(){
-        console.log(`${sock.remoteAddress}:${sock.remotePort} Terminated the connection`);
-    });
-    //Handle Client connection error.
-    sock.on('error',function(error){
-        console.error(`${sock.remoteAddress}:${sock.remotePort} Connection Error ${error}`);
-    });
-};
+
+// emits on new datagram msg
+server.on('message',function(msg,info){
+  console.log('Data received from client : ' + msg.toString());
+  console.log('Received %d bytes from %s:%d\n',msg.length, info.address, info.port);
+
+//sending msg
+server.send(msg,info.port,'localhost',function(error){
+  if(error){
+    server.close();
+  }else{
+    console.log('Data sent !!!');
+  }
+
+});
+
+});
+
+//emits when socket is ready and listening for datagram msgs
+server.on('listening',function(){
+  const address = server.address();
+  const port = address.port;
+  const family = address.family;
+  const ipaddr = address.address;
+  console.log('Server is listening at port: ' + port);
+  console.log('Server ip :' + ipaddr);
+  console.log('Server is IP4/IP6 : ' + family);
+});
+
+//emits after the socket is closed using socket.close();
+server.on('close',function(){
+  console.log('Socket is closed !');
+});
+
+server.bind(2222);
