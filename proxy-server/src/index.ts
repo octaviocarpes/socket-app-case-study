@@ -16,10 +16,12 @@ app.use(cors());
 
 
 // creating a client socket
-const client = udp.createSocket('udp4');
 
 
 app.post('/', (req, res) => {
+    let response = '';
+    const client = udp.createSocket('udp4');
+
     client.send(req.body.message,2222,'localhost',function(error){
         if(error){
           client.close();
@@ -32,9 +34,13 @@ app.post('/', (req, res) => {
         console.log('Data received from server : ' + msg.toString());
         console.log('Received %d bytes from %s:%d\n',msg.length, info.address, info.port);
         console.log(msg.toString());''
-        const response = msg.toString();
-        res.send(`Your message has ${convert2Bytes(response)} bytes`);
+        response = msg.toString();
     });
+
+    setTimeout(() => {
+        client.close();
+        res.status(200).send(`Your message has ${convert2Bytes(response)} bytes`);
+    }, 500);
 });
 
 app.get('/', (req, res) => {

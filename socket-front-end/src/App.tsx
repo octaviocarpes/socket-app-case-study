@@ -1,4 +1,4 @@
-import React, { useState, MouseEvent } from 'react';
+import React, { useState, MouseEvent, ChangeEvent } from 'react';
 import axios from 'axios';
 import './App.css';
 import style from 'styled-components';
@@ -14,7 +14,12 @@ const Container = style.div`
   border: 1px solid;
   display: grid;
   grid-template-columns: 100%;
-  grid-template-rows: 10% 90%;
+  grid-template-rows: 10% 40% 50%;
+
+  textarea {
+    width: 70%;
+    height: 50%;
+  }
 
 `;
 
@@ -89,6 +94,7 @@ const App = () => {
   const [tcpResponse, setTcpResponse] = useState('');
   const [udp, setUdp] = useState('');
   const [udpResponse, setUdpResponse] = useState('');
+  const [textAreaMessage, setTextArea] = useState('');
 
   const connectWithTCP = (event: MouseEvent): void => {
     event.preventDefault();
@@ -96,11 +102,17 @@ const App = () => {
     const io = socket(TCP_HOST);
     io.on('connect', () => {
       setTcp(`TCP Connected, Uploading file with TCP server.`);
-      const TcpFile: HTMLElement = document.getElementById('tcp-input')!;
-      TcpFile.click();
-      TcpFile.onchange = (file: any) => {
-        io.emit('upload', { 'Name': 'File', 'Data': file.target.value})
-      };
+
+      if (textAreaMessage.length) {
+        io.emit('upload', { 'Name': 'File', 'Data': textAreaMessage})
+        return;
+      } else {
+        const TcpFile: HTMLElement = document.getElementById('tcp-input')!;
+        TcpFile.click();
+        TcpFile.onchange = (file: any) => {
+          io.emit('upload', { 'Name': 'File', 'Data': file.target.value})
+        };
+      }
     });
 
     io.on('upload-response', (data: any) => {
@@ -111,11 +123,10 @@ const App = () => {
   const connectWithUDP = (event: MouseEvent): void => {
     event.preventDefault();
     setUdp(`Udp Connected, Uploading file with TCP server.`);
-    const UdpFile: HTMLElement = document.getElementById('udp-input')!;
-    UdpFile.click();
-    UdpFile.onchange = (file: any) => {
+
+    if (textAreaMessage.length) {
       axios.post(UDP_HOST, {
-        message: file.target.value
+        message: textAreaMessage
       })
       .then(response => {
         setUdpResponse(response.data);
@@ -123,7 +134,36 @@ const App = () => {
       .catch(error => {
         console.log(error);
       });
+    } else {
+      const UdpFile: HTMLElement = document.getElementById('udp-input')!;
+      UdpFile.click();
+      UdpFile.onchange = (file: any) => {
+        axios.post(UDP_HOST, {
+          message: file.target.value
+        })
+        .then(response => {
+          setUdpResponse(response.data);
+        })
+        .catch(error => {
+          console.log(error);
+        });
+      };
+    }
+
+  };
+
+  const _handleOnChange = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+    setTextArea(e.target.value);
+  };
+
+  const generateMessage = (e: MouseEvent, size: number): void => {
+    e.preventDefault();
+    let message = '';
+    for(let i = 0; i < size; i++) {
+      message += '1';
     };
+    setTextArea(message);
+    console.log(message);
   };
 
   return (
@@ -134,6 +174,12 @@ const App = () => {
             <h1>Tarefa 2 - Laboratorio de redes</h1>
           </title>
         </Header>
+        <div>
+          <h3>Digite sua mensagem aqui ou faca um upload</h3>
+          <textarea value={textAreaMessage} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>): void => _handleOnChange(e)}></textarea>
+          <button onClick={(e: MouseEvent) => generateMessage(e, 1500)}>Gerar mensagem de 1500 bytes</button>
+          <button onClick={(e: MouseEvent) => generateMessage(e, 10000)}>Gerar mensagem de 10000 bytes</button>
+        </div>
         <UploadContainer>
             <div>
               <form>
