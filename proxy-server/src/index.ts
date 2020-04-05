@@ -14,16 +14,12 @@ app.use(bodyParser.urlencoded({
 app.use(bodyParser.json());
 app.use(cors());
 
-
-// creating a client socket
-
-
 app.post('/', (req, res) => {
-    let response = '';
     const client = udp.createSocket('udp4');
 
     client.send(req.body.message,2222,'localhost',function(error){
         if(error){
+          console.log('ERROR!', error)
           client.close();
         }else{
           console.log('Data sent !!!');
@@ -34,13 +30,12 @@ app.post('/', (req, res) => {
         console.log('Data received from server : ' + msg.toString());
         console.log('Received %d bytes from %s:%d\n',msg.length, info.address, info.port);
         console.log(msg.toString());''
-        response = msg.toString();
+        const response = msg.toString();
+        setTimeout(() => {
+            res.status(200).send(`Your message has ${convert2Bytes(response)} bytes`);
+        }, 500);
     });
 
-    setTimeout(() => {
-        client.close();
-        res.status(200).send(`Your message has ${convert2Bytes(response)} bytes`);
-    }, 500);
 });
 
 app.get('/', (req, res) => {
